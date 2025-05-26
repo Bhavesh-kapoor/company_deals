@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Models;
+
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
@@ -36,67 +38,67 @@ class Property extends Model
 
     public function buyers()
     {
-        return $this->belongsToMany(Buyer::class)->withPivot('id','is_active');
+        return $this->belongsToMany(Buyer::class)->withPivot('id', 'is_active');
     }
 
     public function allPayment()
     {
-        $payments = self::join('payments', 'properties.id', '=', 'payments.service_id')->where('service_id', '=',$this->id)->where('service_type', '=', 'seller_property')->select('payments.*')->orderBy('updated_at', 'desc')->get();
+        $payments = self::join('payments', 'properties.id', '=', 'payments.service_id')->where('service_id', '=', $this->id)->where('service_type', '=', 'seller_property')->select('payments.*')->orderBy('updated_at', 'desc')->get();
         return $payments;
-
     }
 
-     public static function seller_properties($condition) {
+    public static function seller_properties($condition, $third = false)
+    {
         $user =  \Auth::guard('user')->user();
-        if($condition == "all"){
+        if ($condition == "all") {
             $properties = $user->properties;
-        }elseif($condition == "active"){
-            $properties = $user->properties()->where('properties.status','active')->get();
-        }elseif($condition == "inactive"){
-            $properties = $user->properties()->where('properties.status','inactive')->get();
+        } else {
+            $properties = $user->properties()->where('properties.status', $condition)->get();
         }
-      $arrPrperty = array();
-      foreach($properties as $eachProperty){
-        $tempArr = array(
-            'id' => $eachProperty->id,
-            'urn' => $eachProperty->urn,
-            'state' => $eachProperty->state,
-            'pincode' => $eachProperty->pincode,
-            'address' => $eachProperty->address,
-            'space' => $eachProperty->space,
-            'type' => $eachProperty->type,
-            'ask_price' => $eachProperty->ask_price,
-            'ask_price_unit' => $eachProperty->ask_price_unit,
-            'status' => ($eachProperty->deal_closed)?"Deal Closed": $eachProperty->status,
-            'deal_closed' => $eachProperty->deal_closed,
-            'buyer_id' => $eachProperty->buyer_id,
-        );
-        if($eachProperty->deal_closed == 1 &&  $eachProperty->buyer_id > 0 ){
+
+        if ($third == true) {
+            $properties = $user->properties()->where('properties.deal_closed', 1)->get();
+        }
+
+        $arrPrperty = array();
+        foreach ($properties as $eachProperty) {
+            $tempArr = array(
+                'id' => $eachProperty->id,
+                'urn' => $eachProperty->urn,
+                'state' => $eachProperty->state,
+                'pincode' => $eachProperty->pincode,
+                'address' => $eachProperty->address,
+                'space' => $eachProperty->space,
+                'type' => $eachProperty->type,
+                'ask_price' => $eachProperty->ask_price,
+                'ask_price_unit' => $eachProperty->ask_price_unit,
+                'status' => ($eachProperty->deal_closed) ? "Deal Closed" : $eachProperty->status,
+                'deal_closed' => $eachProperty->deal_closed,
+                'buyer_id' => $eachProperty->buyer_id,
+            );
+            if ($eachProperty->deal_closed == 1 &&  $eachProperty->buyer_id > 0) {
                 $finalBuyer = Buyer::findOrFail($eachProperty->buyer_id);
-                $tempArr['finalBuyer'] =  "Name: ". $finalBuyer->name.", Whatsapp: ".$finalBuyer->phone.", Email: ".$finalBuyer->email.",<br> Previous deals done: ".$finalBuyer->buyer_no_deal_closed .", Amount of deals closed: ".number_format(($finalBuyer->buyer_amount_deal_closed)/1000) ." Thousands";
-
-        }
-        $buyers = $eachProperty->buyers;
-        $tempArr['no_interested_buyer'] = 0;
-        if(count($buyers) > 0){
-            $tempArr['no_interested_buyer'] = count($buyers) ;
-        }
-        $buyersArr = array();
-        foreach($buyers as $eachBuyer){
-            // var_dump($eachBuyer);
-            if(!is_null($eachBuyer->pivot)  && $eachBuyer->pivot->is_active == 'active'){
-                $tempBuyer = array();
-                $tempBuyer['buyerDetail'] = "Name: ". $eachBuyer->name.", Whatsapp: ".$eachBuyer->phone.", Email: ".$eachBuyer->email.",<br> Previous deals done: ".$eachBuyer->buyer_no_deal_closed .", Amount of deals closed: ".number_format(($eachBuyer->buyer_amount_deal_closed)/1000) ." Thousands";
-                $tempBuyer['buyer_id'] = $eachBuyer->pivot->buyer_id;
-                $buyersArr[] = $tempBuyer;
-
+                $tempArr['finalBuyer'] =  "Name: " . $finalBuyer->name . ", Whatsapp: " . $finalBuyer->phone . ", Email: " . $finalBuyer->email . ",<br> Previous deals done: " . $finalBuyer->buyer_no_deal_closed . ", Amount of deals closed: " . number_format(($finalBuyer->buyer_amount_deal_closed) / 1000) . " Thousands";
             }
+            $buyers = $eachProperty->buyers;
+            $tempArr['no_interested_buyer'] = 0;
+            if (count($buyers) > 0) {
+                $tempArr['no_interested_buyer'] = count($buyers);
+            }
+            $buyersArr = array();
+            foreach ($buyers as $eachBuyer) {
+                // var_dump($eachBuyer);
+                if (!is_null($eachBuyer->pivot)  && $eachBuyer->pivot->is_active == 'active') {
+                    $tempBuyer = array();
+                    $tempBuyer['buyerDetail'] = "Name: " . $eachBuyer->name . ", Whatsapp: " . $eachBuyer->phone . ", Email: " . $eachBuyer->email . ",<br> Previous deals done: " . $eachBuyer->buyer_no_deal_closed . ", Amount of deals closed: " . number_format(($eachBuyer->buyer_amount_deal_closed) / 1000) . " Thousands";
+                    $tempBuyer['buyer_id'] = $eachBuyer->pivot->buyer_id;
+                    $buyersArr[] = $tempBuyer;
+                }
+            }
+            $tempArr['buyers'] = $buyersArr;
+            $arrPrperty[] = $tempArr;
         }
-        $tempArr['buyers'] = $buyersArr;
-        $arrPrperty[] = $tempArr;
-      }
-      
+
         return $arrPrperty;
     }
-    
 }

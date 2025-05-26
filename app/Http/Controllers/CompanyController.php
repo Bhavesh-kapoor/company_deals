@@ -233,7 +233,7 @@ class CompanyController extends Controller
             # $companyData = Company::findOrFail($request->input('id'));
             $companyData->update($validatedData);
         } else {
-            $validatedData['status'] = 'active';
+            $validatedData['status'] = 'inactive';
             $validatedData['urn'] = uniqid();
             $validatedData['user_id'] = \Auth::guard('user')->id();
             $companyData = Company::create($validatedData);

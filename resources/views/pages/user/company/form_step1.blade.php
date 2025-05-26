@@ -215,7 +215,7 @@ id="check_availability" type="button">Check Availability</button>
                 <div class="col-md-6">
                     <div class="field">
                         <label for="demat_shareholding">Demat Shareholding <span class="text-danger">*</span></label>  
-                    <select id="demat_shareholding" class="form-select" name="demat_shareholding" required>
+                    <select id="demat_shareholding" onchange="directValue(this.value)" class="form-select" name="demat_shareholding" required>
                         <option value="">-Select-</option>
                         {!!$demat_shareholding_option!!}
                     </select>
@@ -224,12 +224,18 @@ id="check_availability" type="button">Check Availability</button>
                 <div class="col-md-6">
                     <div class="field">
                         <label for="physical_shareholding">Physical Shareholding <span class="text-danger">*</span></label> 
-                        <select id="physical_shareholding" class="form-select" name="physical_shareholding" required>
+                        <select id="physical_shareholding" id="physical_shareholding" class="form-select" name="physical_shareholding" required>
                             <option value="">-Select-</option>
                             {!!$physical_shareholding_option!!}
                         </select>
                     </div>
                 </div>
+                <script>
+                    function directValue(value){
+                        let remaingvalyue  =  100 - value;
+                       $('#physical_shareholding').val(remaingvalyue).change();
+                    }
+                </script>
                 
             </div>
             <div id="additionalDiv" class="row">                 

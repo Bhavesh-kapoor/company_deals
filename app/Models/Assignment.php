@@ -32,64 +32,66 @@ class Assignment extends Model
     }
     public function buyers()
     {
-        return $this->belongsToMany(Buyer::class)->withPivot('id','is_active');
+        return $this->belongsToMany(Buyer::class)->withPivot('id', 'is_active');
     }
 
     public function allPayment()
     {
-        $payments = self::join('payments', 'assignments.id', '=', 'payments.service_id')->where('service_id', '=',$this->id)->where('service_type', '=', 'seller_assignment')->select('payments.*')->orderBy('created_at', 'desc')->get();
+        $payments = self::join('payments', 'assignments.id', '=', 'payments.service_id')->where('service_id', '=', $this->id)->where('service_type', '=', 'seller_assignment')->select('payments.*')->orderBy('created_at', 'desc')->get();
         return $payments;
-
     }
-    public static function buyer_assignments() {
+    public static function buyer_assignments()
+    {
         $buyer_id =  \Auth::guard('user')->id();
         $buyer = Buyer::findOrFail($buyer_id);
         $interestedAssignments = $buyer->assignments;
         $interestedAssignmentArr = array();
-        foreach($interestedAssignments as $key => $assignment){
-            if($assignment->deal_closed ==1)
+        foreach ($interestedAssignments as $key => $assignment) {
+            if ($assignment->deal_closed == 1)
                 continue;
             $tempAssignment = self::getAssignmentDetail($assignment);
             $tempAssignment['buyer_status'] = $assignment->pivot->is_active;
-            if($assignment->pivot->is_active == 'active'){
+            if ($assignment->pivot->is_active == 'active') {
                 $seller_id = $assignment->user_id;
                 $seller = User::where('id', $seller_id)->first();
-              //  var_dump($seller);
-                $tempAssignment['seller'] = "Name: ". $seller->name.", Phone: ".$seller->phone.", Email: ".$seller->email;
-                if($seller->amount_deal_closed > 0){
-                    $tempAssignment['seller'] .="<br>No of deal closed: ".$seller->no_deal_closed.", amount of deal closed: ".number_format($seller->amount_deal_closed);
+                //  var_dump($seller);
+                $tempAssignment['seller'] = "Name: " . $seller->name . ", Phone: " . $seller->phone . ", Email: " . $seller->email;
+                if ($seller->amount_deal_closed > 0) {
+                    $tempAssignment['seller'] .= "<br>No of deal closed: " . $seller->no_deal_closed . ", amount of deal closed: " . number_format($seller->amount_deal_closed);
                 }
-
             }
-            $interestedAssignmentArr[] =$tempAssignment;
+            $interestedAssignmentArr[] = $tempAssignment;
             return $interestedAssignmentArr;
         }
-
     }
-    protected static function getAssignmentDetail($assignment){
+    protected static function getAssignmentDetail($assignment)
+    {
         return array(
-                'id' => $assignment->id,
-                'urn' => $assignment->urn,
-                'category' => $assignment->category,
-                'subject' => $assignment->subject,
-                'description' => $assignment->description,
-                'deal_price' => $assignment->deal_price,
-                'is_active' => $assignment->is_active,
-                'deal_closed' => $assignment->deal_closed
-            );
+            'id' => $assignment->id,
+            'urn' => $assignment->urn,
+            'category' => $assignment->category,
+            'subject' => $assignment->subject,
+            'description' => $assignment->description,
+            'deal_price' => $assignment->deal_price,
+            'is_active' => $assignment->is_active,
+            'deal_closed' => $assignment->deal_closed
+        );
     }
-    public static function seller_assignments($condition) {
+    public static function seller_assignments($condition, $third = false)
+    {
         $user =  \Auth::guard('user')->user();
-        
-        if($condition == "all"){
+
+        if ($condition == "all") {
             $assignments = $user->assignments;
-        }elseif($condition == "active"){
-            $assignments = $user->assignments()->where('assignments.is_active','active')->get();
-        }elseif($condition == "inactive"){
-            $assignments = $user->assignments()->where('assignments.is_active','inactive')->get();
+        } else {
+            $assignments = $user->assignments()->where('assignments.is_active', $condition)->get();
+        }
+
+        if ($third == true) {
+            $assignments = $user->assignments()->where('assignments.deal_closed', 1)->get();
         }
         $arrAssignment = array();
-        foreach($assignments as $eachAssignment){
+        foreach ($assignments as $eachAssignment) {
             $tempArr = array(
                 'id' => $eachAssignment->id,
                 'urn' => $eachAssignment->urn,
@@ -101,30 +103,28 @@ class Assignment extends Model
                 'deal_price_unit' => $eachAssignment->deal_price_unit,
                 'deal_closed' => $eachAssignment->deal_closed,
                 'buyer_id' => $eachAssignment->buyer_id,
-                'is_active' => ($eachAssignment->deal_closed)?"Deal Closed": $eachAssignment->is_active,
+                'is_active' => ($eachAssignment->deal_closed) ? "Deal Closed" : $eachAssignment->is_active,
             );
-            
-            if($eachAssignment->deal_closed == 1 &&  $eachAssignment->buyer_id > 0 ){
-                $finalBuyer = Buyer::findOrFail($eachAssignment->buyer_id);
-                $tempArr['finalBuyer'] =  "Name: ". $finalBuyer->name.", Whatsapp: ".$finalBuyer->phone.", Email: ".$finalBuyer->email.",<br> Previous deals done: ".$finalBuyer->buyer_no_deal_closed .", Amount of deals closed: ".number_format(($finalBuyer->buyer_amount_deal_closed)/1000) ." Thousands";
 
+            if ($eachAssignment->deal_closed == 1 &&  $eachAssignment->buyer_id > 0) {
+                $finalBuyer = Buyer::findOrFail($eachAssignment->buyer_id);
+                $tempArr['finalBuyer'] =  "Name: " . $finalBuyer->name . ", Whatsapp: " . $finalBuyer->phone . ", Email: " . $finalBuyer->email . ",<br> Previous deals done: " . $finalBuyer->buyer_no_deal_closed . ", Amount of deals closed: " . number_format(($finalBuyer->buyer_amount_deal_closed) / 1000) . " Thousands";
             }
-            
+
             $buyers = $eachAssignment->buyers;
             $tempArr['no_interested_buyer'] = 0;
-            if(count($buyers) > 0){
-                $tempArr['no_interested_buyer'] = count($buyers) ;
+            if (count($buyers) > 0) {
+                $tempArr['no_interested_buyer'] = count($buyers);
             }
-            
+
             $buyersArr = array();
-            foreach($buyers as $eachBuyer){
+            foreach ($buyers as $eachBuyer) {
                 // var_dump($eachBuyer);
-                if(!is_null($eachBuyer->pivot)  && $eachBuyer->pivot->is_active == 'active'){
+                if (!is_null($eachBuyer->pivot)  && $eachBuyer->pivot->is_active == 'active') {
                     $tempBuyer = array();
-                    $tempBuyer['buyerDetail'] = "Name: ". $eachBuyer->name.", Whatsapp: ".$eachBuyer->phone.", Email: ".$eachBuyer->email.",<br> Previous deals done: ".$eachBuyer->buyer_no_deal_closed .", Amount of deals closed: ".number_format(($eachBuyer->buyer_amount_deal_closed)/1000) ." Thousands";
+                    $tempBuyer['buyerDetail'] = "Name: " . $eachBuyer->name . ", Whatsapp: " . $eachBuyer->phone . ", Email: " . $eachBuyer->email . ",<br> Previous deals done: " . $eachBuyer->buyer_no_deal_closed . ", Amount of deals closed: " . number_format(($eachBuyer->buyer_amount_deal_closed) / 1000) . " Thousands";
                     $tempBuyer['buyer_id'] = $eachBuyer->pivot->buyer_id;
                     $buyersArr[] = $tempBuyer;
-
                 }
             }
             $tempArr['buyers'] = $buyersArr;

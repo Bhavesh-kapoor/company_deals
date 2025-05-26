@@ -51,7 +51,7 @@ class Company extends Model
         'certificate_incorporation',
         'pan_card',
         'moa_aoa',
-        'llp_agreement', 
+        'llp_agreement',
         'gst_certificate',
         'audited_fs1',
         'audited_fs2',
@@ -63,7 +63,7 @@ class Company extends Model
         'other_document2',
         'other_document3',
         'other_document4',
-        
+
         'turnover_year1',
         'turnover1',
         'turnover_unit1',
@@ -153,7 +153,7 @@ class Company extends Model
         'debtors',
         'debtors_unit',
         'debtors_amount',
-        
+
         'cash_bank',
         'cash_bank_unit',
         'cash_bank_amount',
@@ -191,61 +191,61 @@ class Company extends Model
     }
     public function buyers()
     {
-        return $this->belongsToMany(Buyer::class)->withPivot('id','is_active');
+        return $this->belongsToMany(Buyer::class)->withPivot('id', 'is_active');
     }
     public function allPayment()
     {
-        $payments = self::join('payments', 'companies.id', '=', 'payments.service_id')->where('service_id', '=',$this->id)->where('service_type', '=', 'seller_company')->select('payments.*')->orderBy('created_at', 'desc')->get();
+        $payments = self::join('payments', 'companies.id', '=', 'payments.service_id')->where('service_id', '=', $this->id)->where('service_type', '=', 'seller_company')->select('payments.*')->orderBy('created_at', 'desc')->get();
         return $payments;
-
     }
-    public static function seller_companies($condition){
+    public static function seller_companies($condition, $third = false)
+    {
         $user =  \Auth::guard('user')->user();
-        if($condition == "all"){
+        if ($condition == "all") {
             $companies = $user->companies;
-        }elseif($condition == "active"){
-                $companies = $user->companies()->where('companies.status','active')->get();
-        }elseif($condition == "inactive"){
-                $companies = $user->companies()->where('companies.status','inactive')->get();
+        } else {
+            $companies = $user->companies()->where('companies.status', $condition)->get();
         }
-        
+
+        if ($third == true) {
+            $companies = $user->companies()->where('companies.deal_closed', 1)->get();
+        }
+
         $arrCompany = array();
-        foreach($companies as $eachCompany){
+        foreach ($companies as $eachCompany) {
             $tempArr = array(
                 'id' => $eachCompany->id,
                 'urn' => $eachCompany->urn,
                 'type_of_entity' => $eachCompany->type_of_entity,
                 'name' => $eachCompany->name,
-                'name_prefix' => $eachCompany->name_prefix,  
+                'name_prefix' => $eachCompany->name_prefix,
                 'cin_llpin' => $eachCompany->cin_llpin,
                 'roc' => $eachCompany->roc,
                 'year_of_incorporation' => $eachCompany->year_of_incorporation,
                 'industry' => $eachCompany->industry,
-                'status' => ($eachCompany->deal_closed)?"Deal Closed": $eachCompany->status,
+                'status' => ($eachCompany->deal_closed) ? "Deal Closed" : $eachCompany->status,
                 'ask_price' => $eachCompany->ask_price,
                 'ask_price_unit' => $eachCompany->ask_price_unit,
                 'deal_closed' => $eachCompany->deal_closed,
                 'buyer_id' => $eachCompany->buyer_id,
             );
-            if($eachCompany->deal_closed == 1 &&  $eachCompany->buyer_id > 0 ){
+            if ($eachCompany->deal_closed == 1 &&  $eachCompany->buyer_id > 0) {
                 $finalBuyer = Buyer::findOrFail($eachCompany->buyer_id);
-                $tempArr['finalBuyer'] =  "Name: ". $finalBuyer->name.", Whatsapp: ".$finalBuyer->phone.", Email: ".$finalBuyer->email.",<br> Previous deals done: ".$finalBuyer->buyer_no_deal_closed .", Amount of deals closed: ".number_format(($finalBuyer->buyer_amount_deal_closed)/1000) ." Thousands";
-
+                $tempArr['finalBuyer'] =  "Name: " . $finalBuyer->name . ", Whatsapp: " . $finalBuyer->phone . ", Email: " . $finalBuyer->email . ",<br> Previous deals done: " . $finalBuyer->buyer_no_deal_closed . ", Amount of deals closed: " . number_format(($finalBuyer->buyer_amount_deal_closed) / 1000) . " Thousands";
             }
             $buyers = $eachCompany->buyers;
             $tempArr['no_interested_buyer'] = 0;
-            if(count($buyers) > 0){
-                $tempArr['no_interested_buyer'] = count($buyers) ;
+            if (count($buyers) > 0) {
+                $tempArr['no_interested_buyer'] = count($buyers);
             }
             $buyersArr = array();
-            foreach($buyers as $eachBuyer){
+            foreach ($buyers as $eachBuyer) {
                 // var_dump($eachBuyer);
-                if(!is_null($eachBuyer->pivot)  && $eachBuyer->pivot->is_active == 'active'){
+                if (!is_null($eachBuyer->pivot)  && $eachBuyer->pivot->is_active == 'active') {
                     $tempBuyer = array();
-                    $tempBuyer['buyerDetail'] = "Name: ". $eachBuyer->name.", Whatsapp: ".$eachBuyer->phone.", Email: ".$eachBuyer->email.",<br> Previous deals done: ".$eachBuyer->buyer_no_deal_closed .", Amount of deals closed: ".number_format(($eachBuyer->buyer_amount_deal_closed)/1000) ." Thousands";
+                    $tempBuyer['buyerDetail'] = "Name: " . $eachBuyer->name . ", Whatsapp: " . $eachBuyer->phone . ", Email: " . $eachBuyer->email . ",<br> Previous deals done: " . $eachBuyer->buyer_no_deal_closed . ", Amount of deals closed: " . number_format(($eachBuyer->buyer_amount_deal_closed) / 1000) . " Thousands";
                     $tempBuyer['buyer_id'] = $eachBuyer->pivot->buyer_id;
                     $buyersArr[] = $tempBuyer;
-
                 }
             }
             $tempArr['buyers'] = $buyersArr;

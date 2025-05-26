@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+
 use App\Models\User;
 use App\Models\Buyer;
 use Illuminate\Database\Eloquent\Model;
@@ -40,27 +41,29 @@ class NocTrademark extends Model
     }
     public function buyers()
     {
-        return $this->belongsToMany(Buyer::class)->withPivot('id','is_active');
+        return $this->belongsToMany(Buyer::class)->withPivot('id', 'is_active');
     }
 
     public function allPayment()
     {
-        $payments = self::join('payments', 'noc_trademarks.id', '=', 'payments.service_id')->where('service_id', '=',$this->id)->where('service_type', '=', 'seller_trademark')->select('payments.*')->orderBy('created_at', 'desc')->get();
+        $payments = self::join('payments', 'noc_trademarks.id', '=', 'payments.service_id')->where('service_id', '=', $this->id)->where('service_type', '=', 'seller_trademark')->select('payments.*')->orderBy('created_at', 'desc')->get();
         return $payments;
-
     }
-    public static function seller_noctrademark($condition) {
+    public static function seller_noctrademark($condition, $third =  false)
+    {
         $user =  \Auth::guard('user')->user();
-        if($condition == "all"){
+        if ($condition == "all") {
             $nocTrademarks = $user->nocTrademarks;
-        }elseif($condition == "active"){
-            $nocTrademarks = $user->nocTrademarks()->where('noc_trademarks.is_active','active')->get();
-        }elseif($condition == "inactive"){
-            $nocTrademarks = $user->nocTrademarks()->where('noc_trademarks.is_active','inactive')->get();
+        } else {
+            $nocTrademarks = $user->nocTrademarks()->where('noc_trademarks.is_active', $condition)->get();
         }
-        
+
+
+        if ($third == true) {
+            $nocTrademarks = $user->nocTrademarks()->where('noc_trademarks.deal_closed', 1)->get();
+        }
         $arrTrademark = array();
-        foreach($nocTrademarks as $eachTrademark){
+        foreach ($nocTrademarks as $eachTrademark) {
             $tempArr = array(
                 'id' => $eachTrademark->id,
                 'urn' => $eachTrademark->urn,
@@ -74,31 +77,29 @@ class NocTrademark extends Model
                 'ask_price' => $eachTrademark->ask_price,
                 'ask_price_unit' => $eachTrademark->ask_price_unit,
                 'buyer_id' => $eachTrademark->buyer_id,
-                'is_active' => ($eachTrademark->deal_closed)?"Deal Closed": $eachTrademark->is_active,
+                'is_active' => ($eachTrademark->deal_closed) ? "Deal Closed" : $eachTrademark->is_active,
 
 
                 $eachTrademark->is_active,
                 'deal_closed' => $eachTrademark->deal_closed,
             );
-            if($eachTrademark->deal_closed == 1 &&  $eachTrademark->buyer_id > 0 ){
+            if ($eachTrademark->deal_closed == 1 &&  $eachTrademark->buyer_id > 0) {
                 $finalBuyer = Buyer::findOrFail($eachTrademark->buyer_id);
-                $tempArr['finalBuyer'] =  "Name: ". $finalBuyer->name.", Whatsapp: ".$finalBuyer->phone.", Email: ".$finalBuyer->email.",<br> Previous deals done: ".$finalBuyer->buyer_no_deal_closed .", Amount of deals closed: ".number_format(($finalBuyer->buyer_amount_deal_closed)/1000) ." Thousands";
-
+                $tempArr['finalBuyer'] =  "Name: " . $finalBuyer->name . ", Whatsapp: " . $finalBuyer->phone . ", Email: " . $finalBuyer->email . ",<br> Previous deals done: " . $finalBuyer->buyer_no_deal_closed . ", Amount of deals closed: " . number_format(($finalBuyer->buyer_amount_deal_closed) / 1000) . " Thousands";
             }
             $buyers = $eachTrademark->buyers;
             $tempArr['no_interested_buyer'] = 0;
-            if(count($buyers) > 0){
-                $tempArr['no_interested_buyer'] = count($buyers) ;
+            if (count($buyers) > 0) {
+                $tempArr['no_interested_buyer'] = count($buyers);
             }
             $buyersArr = array();
-            foreach($buyers as $eachBuyer){
+            foreach ($buyers as $eachBuyer) {
                 // var_dump($eachBuyer);
-                if(!is_null($eachBuyer->pivot)  && $eachBuyer->pivot->is_active == 'active'){
+                if (!is_null($eachBuyer->pivot)  && $eachBuyer->pivot->is_active == 'active') {
                     $tempBuyer = array();
-                    $tempBuyer['buyerDetail'] = "Name: ". $eachBuyer->name.", Whatsapp: ".$eachBuyer->phone.", Email: ".$eachBuyer->email.",<br> Previous deals done: ".$eachBuyer->buyer_no_deal_closed .", Amount of deals closed: ".number_format(($eachBuyer->buyer_amount_deal_closed)/1000) ." Thousands";
+                    $tempBuyer['buyerDetail'] = "Name: " . $eachBuyer->name . ", Whatsapp: " . $eachBuyer->phone . ", Email: " . $eachBuyer->email . ",<br> Previous deals done: " . $eachBuyer->buyer_no_deal_closed . ", Amount of deals closed: " . number_format(($eachBuyer->buyer_amount_deal_closed) / 1000) . " Thousands";
                     $tempBuyer['buyer_id'] = $eachBuyer->pivot->buyer_id;
                     $buyersArr[] = $tempBuyer;
-
                 }
             }
             $tempArr['buyers'] = $buyersArr;
@@ -106,5 +107,4 @@ class NocTrademark extends Model
         }
         return $arrTrademark;
     }
-    
 }
